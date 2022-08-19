@@ -1,0 +1,165 @@
+
+#nombre Equipo
+:global nombreequipo "Router02";
+##########################################################
+#ip /29 proveedor de internet ISP01
+:global ipisp01 "10.15.0.2";
+:global ipisp012 "10.15.0.3";
+:global ipisp013 "10.15.0.4";
+:global ipisp014 "10.15.0.5";
+:global ipisp015 "10.15.0.6";
+##########################################################
+#ip /29 Proveedor de internet ISP02
+:global ipisp02 "10.16.0.2";
+:global ipisp022 "10.16.0.3";
+:global ipisp023 "10.16.0.4";
+:global ipisp024 "10.16.0.5";
+:global ipisp025 "10.16.0.6";
+##########################################################
+#IP red WAN de gobierno de mendoza
+:global ipredwan "10.17.0.2";
+##########################################################
+#ip interface a router interno de core
+:global iproutercore01 "10.19.0.2"
+:global iproutercore02 "10.19.0.5"
+############################################################
+#IP VRRP
+:global ipVRRP "10.19.0.5"
+###########################################################
+#ip de gateway de cada uno de los proveedores
+:global gwisp01 "10.15.0.1";
+:global gwisp02 "10.16.0.1";
+:global gwredwan "10.17.0.1";
+
+###############################################################
+#ip Gateway routers de core internos
+:global gwroutercore01 "10.19.0.3"
+:global gwroutercore02 "10.19.0.4"
+###############################################################
+
+:global networkisp01 "10.15.0.0";
+:global networkisp02 "10.16.0.0";
+:global networkredwan "10.17.0.0";
+:global networkroutercore01 "10.19.0.0"
+:global networkroutercore02 "10.19.0.4"
+
+####################################################################
+#redes internas en el router core , para rutas estaticas
+####################################################################
+:global networkLANroutercore01 "10.20.0.0/24"
+:global networkLANroutercore02 "10.20.0.0/24"
+:global networkServidoresroutercore01 "10.30.0.0/24"
+:global networkServidoresroutercore02 "10.30.0.0/24"
+##################################################################################################
+##################################################################################################
+##################################################################################################
+/interface ethernet
+set [ find default-name=ether1 ] name=ether1-WAN-ISP01
+set [ find default-name=ether2 ] name=ether2-WAN-ISP02
+set [ find default-name=ether3 ] name=ether3-WAN-GOBIERNO
+set [ find default-name=ether4 ] name=ether4-Router-Core-01
+set [ find default-name=ether5 ] name=ether5-Router-Core-02
+
+
+/interface vrrp
+add interface=ether4-Router-Core-01 name=vrrp1  vrid=49
+
+
+
+/ip address
+
+add address=($ipisp01 . "/29") comment="IP ISP01" interface=ether1-WAN-ISP01 \
+    network=$networkisp01	
+add address=($ipisp012 . "/29") comment="IP ISP01" interface=ether1-WAN-ISP01 \
+    network=$networkisp01	
+add address=($ipisp013 . "/29") comment="IP ISP01" interface=ether1-WAN-ISP01 \
+    network=$networkisp01	
+add address=($ipisp014 . "/29") comment="IP ISP01" interface=ether1-WAN-ISP01 \
+    network=$networkisp01	
+add address=($ipisp015 . "/29") comment="IP ISP01" interface=ether1-WAN-ISP01 \
+    network=$networkisp01	
+	
+	
+add address=($ipisp02 . "/29") comment="IP ISP02" interface=ether2-WAN-ISP02 \
+    network=$networkisp02
+add address=($ipisp022 . "/29") comment="IP ISP02" interface=ether2-WAN-ISP02 \
+    network=$networkisp02	
+add address=($ipisp023 . "/29") comment="IP ISP02" interface=ether2-WAN-ISP02 \
+    network=$networkisp02	
+add address=($ipisp024 . "/29") comment="IP ISP02" interface=ether2-WAN-ISP02 \
+    network=$networkisp02	
+add address=($ipisp025 . "/29") comment="IP ISP02" interface=ether2-WAN-ISP02 \
+    network=$networkisp02
+
+	
+add address=($ipredwan . "/29") comment="IP RED WAN" interface=ether3-WAN-GOBIERNO \
+    network=$networkredwan
+	
+	
+	
+add address=($iproutercore01 . "/28") comment="IP Router-Core-01" interface=ether4-Router-Core-01 \
+    network=$networkroutercore01
+#####################################################################################################
+#add address=($iproutercore02 . "/30") comment="IP Router-Core-02" interface=ether5-Router-Core-02 \
+#    network=$networkroutercore02	
+#####################################################################################################
+
+add address=($ipVRRP . "/28") comment="IP VRRP Router-Core-01" interface=vrrp1 \
+    network=$networkroutercore01
+
+/ip firewall nat
+add action=src-nat chain=srcnat comment="NAT - ISP01- red LAN" out-interface=\
+    ether1-WAN-ISP01 src-address=$networkLANroutercore01 to-addresses=$ipisp01	
+add action=src-nat chain=srcnat comment="NAT - ISP02- red LAN" out-interface=\
+    ether2-WAN-ISP02 src-address=$networkLANroutercore01 to-addresses=$ipisp02
+add action=src-nat chain=srcnat comment="NAT - ISP01- red Servidores" \
+    out-interface=ether1-WAN-ISP01 src-address=$networkServidoresroutercore01 to-addresses=\
+    $ipisp012
+add action=src-nat chain=srcnat comment="NAT - ISP02- red Servidores" \
+    out-interface=ether2-WAN-ISP02 src-address=$networkServidoresroutercore01 to-addresses=\
+    $ipisp022
+add action=src-nat chain=srcnat comment="NAT - Red Wan" out-interface=\
+    ether3-WAN-GOBIERNO to-addresses=$ipredwan
+/ip route
+add comment=ISP01 disabled=no distance=1 dst-address=1.0.0.1/32 gateway=\
+    $gwisp01 pref-src="" routing-table=main scope=10 suppress-hw-offload=no \
+    target-scope=10
+add check-gateway=ping comment="ruta por defecto ISP01" disabled=no distance=\
+    1 dst-address=0.0.0.0/0 gateway=1.0.0.1 pref-src=0.0.0.0 routing-table=\
+    main scope=10 suppress-hw-offload=no target-scope=11
+add check-gateway=ping comment="ruta defecto - ISP02" disabled=no distance=20 \
+    dst-address=0.0.0.0/0 gateway=4.2.2.2 pref-src=0.0.0.0 routing-table=main \
+    scope=10 suppress-hw-offload=no target-scope=12
+add comment=ISP02 disabled=no distance=1 dst-address=4.2.2.2/32 gateway=\
+    $gwisp02 pref-src=0.0.0.0 routing-table=main scope=10 \
+    suppress-hw-offload=no target-scope=10
+add comment="Ruta a Red WAN" disabled=no distance=1 dst-address=10.18.0.0/29 \
+    gateway=$gwredwan pref-src="" routing-table=main scope=30 \
+    suppress-hw-offload=no target-scope=10
+	
+add comment="Ruta a Red LAN Router-Core-01" disabled=no distance=1 dst-address=$networkLANroutercore01 \
+    gateway=$gwroutercore01 pref-src="" routing-table=main scope=30 \
+    suppress-hw-offload=no target-scope=10 	
+	
+add comment="Ruta a Red LAN Router-Core-02" disabled=no distance=2 dst-address=$networkLANroutercore02 \
+    gateway=$gwroutercore02 pref-src="" routing-table=main scope=30 \
+    suppress-hw-offload=no target-scope=10 		
+	
+add comment="Ruta a Red Servidores Router-Core-01" disabled=no distance=1 dst-address=$networkServidoresroutercore01 \
+    gateway=$gwroutercore01 pref-src="" routing-table=main scope=30 \
+    suppress-hw-offload=no target-scope=10 	
+	
+add comment="Ruta a Red Servidores Router-Core-02" disabled=no distance=2 dst-address=$networkServidoresroutercore02 \
+    gateway=$gwroutercore02 pref-src="" routing-table=main scope=30 \
+    suppress-hw-offload=no target-scope=10 	
+/system identity
+set name= $nombreequipo
+
+/tool netwatch
+add disabled=no down-script="/interface/enable ether1-WAN-ISP01 \r\
+    \n/interface/enable ether2-WAN-ISP02  \r\
+    \n/interface/enable ether3-WAN-GOBIERNO" host=10.19.0.1 http-codes="" \
+    interval=1s test-script="" type=icmp up-script="/interface/disable ether1-WA\
+    N-ISP01 \r\
+    \n/interface/disable ether2-WAN-ISP02  \r\
+    \n/interface/disable ether3-WAN-GOBIERNO"
